@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+
+<head>
+	<title>{{ page.title }}</title>
+	<style>
+	canvas{
+		-moz-user-select: none;
+		-webkit-user-select: none;
+		-ms-user-select: none;
+	}
+	</style>
+</head>
+
+<body>
+	<div style="width:75%;">
+		<canvas id="canvas"></canvas>
+	</div>
+	<br>
+	<br>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.bundle.min.js"></script>
+	<script>
+		var config = {
+			type: 'line',
+			data: {
+				labels: [],
+				datasets: [{
+					label: '{{ page.title }}',
+					backgroundColor: 'rgb(255, 99, 132)',
+					borderColor: 'rgb(255, 99, 132)',
+					data: [],
+					fill: false,
+				}]
+			},
+			options: {
+				responsive: true,
+				title: {
+					display: true,
+					text: '{{ page.title }}'
+				},
+				tooltips: {
+					mode: 'index',
+					intersect: false,
+					callbacks: {
+				        label: function(tooltipItem, data) {
+				            var label = data.datasets[tooltipItem.datasetIndex].label || '';
+
+				            if (label) {
+				                label += ': ';
+				            }
+				            label += tooltipItem.yLabel;
+				            return label + ' %';
+				        }
+				    }
+				},
+				hover: {
+					mode: 'nearest',
+					intersect: true
+				},
+				scales: {
+					xAxes: [{
+						display: true,
+						scaleLabel: {
+							display: true,
+							labelString: 'Rendimento Anual'
+						}
+					}],
+					yAxes: [{
+						display: true,
+						scaleLabel: {
+							display: true,
+							labelString: 'IRS'
+						}
+					}]
+				}
+			}
+		};
+
+		var data = [
+			{% for tier in page.data %}
+			[{{ tier.low|default:'0' }}, {{ tier.high|default:'null' }}, {{ tier.tax }}],
+			{% endfor %}
+		]
+		
+		var lastMax = [0, 0];
+		var paidTax;
+		var graphStep = 500;
+
+		for (var i=0; i < data.length; i++) {
+			if (data[i][1] == null) data[i][1] = data[i][0] * 2;
+			for (var inc=data[i][0]; inc < data[i][1]; inc += graphStep) {
+				config.data.labels.push(inc + ' €');
+				paidTax = (inc - lastMax[0]) * (data[i][2] / 100);
+				config.data.datasets[0].data.push(((lastMax[1] + paidTax) / inc * 100).toFixed(2));
+			}
+			lastMax[1] += (data[i][1] - lastMax[0]) * (data[i][2] / 100);
+			lastMax[0] = data[i][1];
+		}
+
+		window.onload = function() {
+			var ctx = document.getElementById('canvas').getContext('2d');
+			window.myLine = new Chart(ctx, config);
+		};
+	</script>
+</body>
+
+</html>
